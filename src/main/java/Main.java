@@ -1,9 +1,7 @@
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.Optional;
 
 public class Main {
   public static void main(String[] args) {
@@ -21,10 +19,40 @@ public class Main {
 
        try (
                Socket socket = serverSocket.accept(); // Wait for connection from client.
+               BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+               OutputStream out = socket.getOutputStream();
                ){
-           socket.getOutputStream().write(
-                   "HTTP/1.1 200 OK\r\n\r\n".getBytes()
-           );
+           String method, path, httpVersion;
+
+           String inputLine = in.readLine();
+           // first Line
+           if (!isRequestExist(inputLine)){
+               out.write(
+                       "HTTP/1.1 404 Not Found\r\n\r\n".getBytes()
+               );
+               return;
+           }
+           String[] tokens = inputLine.split(" ");
+           method = getMethod(tokens);
+           path = getPath(tokens);
+           httpVersion = getHttpVersion(tokens);
+
+           if (method == null || path == null || httpVersion == null ){
+               out.write(
+                       "HTTP/1.1 404 Not Found\r\n\r\n".getBytes()
+               );
+               return;
+           }
+
+           if (path.equals("/") || path.equals("/index.html")){
+               out.write(
+                       "HTTP/1.1 200 OK\r\n\r\n".getBytes()
+               );
+           } else{
+               out.write(
+                       "HTTP/1.1 404 Not Found\r\n\r\n".getBytes()
+               );
+           }
        }
        System.out.println("accepted new connection");
 //       serverSocket.
@@ -32,4 +60,30 @@ public class Main {
        System.out.println("IOException: " + e.getMessage());
      }
   }
+
+  public static boolean isRequestExist(String inputLine){
+      return inputLine  != null && !inputLine.isEmpty();
+  }
+
+  public static String getMethod(String[] tokens){
+      if (tokens == null || tokens.length == 0){
+          return null;
+      }
+      return tokens[0];
+  }
+
+    public static String getPath(String[] tokens){
+        if (tokens == null || tokens.length < 2){
+            return null;
+        }
+        return tokens[1];
+    }
+
+    public static String getHttpVersion(String[] tokens){
+        if (tokens == null || tokens.length < 3){
+            return null;
+        }
+        return tokens[2];
+    }
+
 }
