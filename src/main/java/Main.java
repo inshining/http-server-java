@@ -1,7 +1,8 @@
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.Optional;
+import java.util.HashMap;
+import java.util.Map;
 
 public class Main {
   public static void main(String[] args) {
@@ -37,6 +38,8 @@ public class Main {
            path = getPath(tokens);
            httpVersion = getHttpVersion(tokens);
 
+           Map<String, String> headers = handlerHeaders(in);
+
            if (method == null || path == null || httpVersion == null ){
                out.write(
                        "HTTP/1.1 404 Not Found\r\n\r\n".getBytes()
@@ -49,9 +52,14 @@ public class Main {
                        "HTTP/1.1 200 OK\r\n\r\n".getBytes()
                );
            }
-           else if(path.startsWith("/echo")){
-               String pathStr = path.split("/")[2];
-               echoHandler(out, pathStr);
+           else if(path.startsWith("/echo") || path.equals("/user-agent")){
+               String pathStr =  "";
+               if (path.startsWith("/echo")){
+                   pathStr = path.split("/")[2];
+               } else{
+                   pathStr = headers.get("User-Agent");
+               }
+               responseBodyHandler(out, pathStr);
 
            }
            else{
@@ -92,7 +100,7 @@ public class Main {
         return tokens[2];
     }
 
-    public static void echoHandler(OutputStream out, String pathStr) throws IOException{
+    public static void responseBodyHandler(OutputStream out, String pathStr) throws IOException{
       int strLen = pathStr.length();
       StringBuilder sb = new StringBuilder();
       sb.append("Content-Length: ");
@@ -107,6 +115,19 @@ public class Main {
 
         // body
         out.write(pathStr.getBytes());
+    }
+
+    public static Map<String, String> handlerHeaders(BufferedReader in) throws  IOException{
+        Map<String, String> header = new HashMap<>();
+        String inputLine = in.readLine();
+        while (inputLine != null && !inputLine.isEmpty()){
+            String key = inputLine.split(":",2)[0].trim();
+            String value = inputLine.split(":",2)[1].trim();
+
+            header.put(key, value);
+            inputLine = in.readLine();
+        }
+        return header;
     }
 
 }
