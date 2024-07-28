@@ -48,7 +48,13 @@ public class Main {
                out.write(
                        "HTTP/1.1 200 OK\r\n\r\n".getBytes()
                );
-           } else{
+           }
+           else if(path.startsWith("/echo")){
+               String pathStr = path.split("/")[2];
+               echoHandler(out, pathStr);
+
+           }
+           else{
                out.write(
                        "HTTP/1.1 404 Not Found\r\n\r\n".getBytes()
                );
@@ -84,6 +90,23 @@ public class Main {
             return null;
         }
         return tokens[2];
+    }
+
+    public static void echoHandler(OutputStream out, String pathStr) throws IOException{
+      int strLen = pathStr.length();
+      StringBuilder sb = new StringBuilder();
+      sb.append("Content-Length: ");
+      sb.append(strLen);
+      sb.append("\r\n\r\n");
+
+        // status
+        out.write( "HTTP/1.1 200 OK\r\n".getBytes());
+        // headers
+        out.write( "Content-Type: text/plain\r\n".getBytes());
+        out.write( sb.toString().getBytes());
+
+        // body
+        out.write(pathStr.getBytes());
     }
 
 }
