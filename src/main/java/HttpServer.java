@@ -171,25 +171,25 @@ public class HttpServer {
         Path filePath = Paths.get(sb.toString());
         boolean exists = Files.exists(filePath);
         String result;
-        try{
-            if (exists){
-                result = handleFileRequestSuccess(filePath);
-            }
-            else{
-                result = "HTTP/1.1 404 Not Found\r\n\r\n";
-            }
-        } catch (IOException e){
+        if (exists){
+            result = handleFileRequestSuccess(filePath);
+        }
+        else{
             result = "HTTP/1.1 404 Not Found\r\n\r\n";
         }
         return result;
     }
 
-    public String handleFileRequestSuccess(Path filePath) throws  IOException{
+    public String handleFileRequestSuccess(Path filePath) {
         StringBuilder sb = new StringBuilder();
-        String content = Files.readString(filePath);
-        sb.append("HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: ");
-        sb.append(content.length()).append("\r\n\r\n");
-        sb.append(content);
+        try{
+            String content = Files.readString(filePath);
+            sb.append("HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: ");
+            sb.append(content.length()).append("\r\n\r\n");
+            sb.append(content);
+        } catch (IOException e){
+            return  "HTTP/1.1 404 Not Found\r\n\r\n";
+        }
         return sb.toString();
     }
 }
