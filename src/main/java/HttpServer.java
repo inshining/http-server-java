@@ -99,10 +99,17 @@ public class HttpServer {
                 } else{
                     pathStr = headers.get("User-Agent");
                 }
-                Map<String, String> responseHeader = getResponseHeader(pathStr, headers);
+
+                Map<String, String> responseHeader = getResponseHeader(pathStr.length(), headers);
 //                responseBodyHandler(out, pathStr);
+                byte[] responseBody = pathStr.getBytes();
 
                 out.write( "HTTP/1.1 200 OK\r\n".getBytes());
+                if (responseHeader.containsKey("Content-Encoding")){
+                    responseBody = GzipCompressor.compress(pathStr);
+                    responseHeader.put("Content-Length", String.valueOf(responseBody.length));
+                }
+
                 for (String key : responseHeader.keySet()){
                     StringBuilder sb = new StringBuilder();
                     sb.append(key);
@@ -112,8 +119,7 @@ public class HttpServer {
                     out.write(sb.toString().getBytes());
                 }
                 out.write("\r\n".getBytes());
-                out.write(pathStr.getBytes());
-
+                out.write(responseBody);
             }
             else if(path.startsWith("/files/")){
                 if (method == Method.GET){
@@ -188,10 +194,10 @@ public class HttpServer {
     }
 
 
-    public static HashMap<String, String> getResponseHeader(String responseBody, Map<String, String> requestHeader){
+    public static HashMap<String, String> getResponseHeader(int contentLen, Map<String, String> requestHeader){
 
         HashMap<String, String> headers = new HashMap<>();
-        headers.put("Content-Length", String.valueOf(responseBody.length()));
+        headers.put("Content-Length", String.valueOf(contentLen));
         headers.put("Content-Type", "text/plain");
         String aeType = requestHeader.getOrDefault("Accept-Encoding", "");
         boolean isContainGzip = Arrays.stream(aeType.split(",")).map(t -> t.trim()).anyMatch(t -> t.equals("gzip"));
