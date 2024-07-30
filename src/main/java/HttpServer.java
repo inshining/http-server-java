@@ -57,7 +57,8 @@ public class HttpServer {
                 BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                 OutputStream out = socket.getOutputStream();
         ){
-            String method, path, httpVersion;
+            String path, httpVersion, body;
+            Method method;
 
             String inputLine = in.readLine();
             // first Line
@@ -73,6 +74,10 @@ public class HttpServer {
             httpVersion = getHttpVersion(tokens);
 
             Map<String, String> headers = handlerHeaders(in);
+
+            //body
+            body = getBody(in);
+
 
             if (method == null || path == null || httpVersion == null ){
                 out.write(
@@ -97,8 +102,16 @@ public class HttpServer {
 
             }
             else if(path.startsWith("/files/")){
-                String body = handleFileRequest(path);
-                out.write(body.getBytes());
+                if (method == Method.GET){
+                    String responseBody = handleFileRequest(path);
+                    out.write(responseBody.getBytes());
+                } else if (method == Method.POST) {
+                    Path writePath = getPath(path);
+                    createFile(writePath, body);
+                    out.write(
+                            "HTTP/1.1 201 Created\r\n\r\n".getBytes()
+                    );
+                }
             }
             else{
                 out.write(
@@ -113,11 +126,12 @@ public class HttpServer {
         return inputLine  != null && !inputLine.isEmpty();
     }
 
-    public static String getMethod(String[] tokens){
+    public static Method getMethod(String[] tokens){
+
         if (tokens == null || tokens.length == 0){
-            return null;
+            return Method.GET;
         }
-        return tokens[0];
+        return MethodParser.parse(tokens[0]);
     }
 
     public static String getPath(String[] tokens){
@@ -132,6 +146,14 @@ public class HttpServer {
             return null;
         }
         return tokens[2];
+    }
+
+    public static String getBody(BufferedReader in) throws IOException{
+        StringBuilder sb = new StringBuilder();
+        while (in.ready()){
+            sb.append((char)in.read());
+        }
+        return sb.toString();
     }
 
     public static void responseBodyHandler(OutputStream out, String pathStr) throws IOException{
@@ -155,6 +177,7 @@ public class HttpServer {
         Map<String, String> header = new HashMap<>();
         String inputLine = in.readLine();
         while (inputLine != null && !inputLine.isEmpty()){
+            System.out.println(inputLine);
             String key = inputLine.split(":",2)[0].trim();
             String value = inputLine.split(":",2)[1].trim();
 
@@ -166,9 +189,7 @@ public class HttpServer {
 
 
     public String handleFileRequest(String path){
-        StringBuilder sb = new StringBuilder();
-        sb.append(directory).append(path.substring(7));
-        Path filePath = Paths.get(sb.toString());
+        Path filePath = getPath(path);
         boolean exists = Files.exists(filePath);
         String result;
         if (exists){
@@ -178,6 +199,13 @@ public class HttpServer {
             result = "HTTP/1.1 404 Not Found\r\n\r\n";
         }
         return result;
+    }
+
+    private Path getPath(String path) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(directory).append(path.substring(7));
+        Path filePath = Paths.get(sb.toString());
+        return filePath;
     }
 
     public String handleFileRequestSuccess(Path filePath) {
@@ -191,5 +219,13 @@ public class HttpServer {
             return  "HTTP/1.1 404 Not Found\r\n\r\n";
         }
         return sb.toString();
+    }
+
+    public void createFile(Path filepath, String content){
+        try {
+            Files.write(filepath, content.getBytes());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }
