@@ -1,6 +1,7 @@
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -11,7 +12,12 @@ public class Main {
 
     // Uncomment this block to pass the first stage
     //
-    final HttpServer server = new HttpServer(4221, 10);
+    final HttpServer server;
+    if (args.length >= 2 && args[0].equals("--directory")){
+      server = new HttpServer(4221, 10, args[1]);
+    }else{
+      server = new HttpServer(4221, 10);
+    }
     server.run();
   }
 }

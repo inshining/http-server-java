@@ -4,6 +4,9 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -13,10 +16,17 @@ public class HttpServer {
 
     private final int port;
     private final ExecutorService executorService;
+    private final String directory;
 
     public HttpServer(final  int port, final int concurrencyLevel){
         this.port = port;
         this.executorService = Executors.newFixedThreadPool(concurrencyLevel);
+        this.directory = "";
+    }
+    public HttpServer(final  int port, final int concurrencyLevel, String directory ){
+        this.port = port;
+        this.executorService = Executors.newFixedThreadPool(concurrencyLevel);
+        this.directory = directory;
     }
 
     public void run(){
@@ -42,7 +52,7 @@ public class HttpServer {
         }
     }
 
-    private static void handleRequest(Socket socket) throws IOException {
+    private void handleRequest(Socket socket) throws IOException {
         try (
                 BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                 OutputStream out = socket.getOutputStream();
@@ -85,6 +95,10 @@ public class HttpServer {
                 }
                 responseBodyHandler(out, pathStr);
 
+            }
+            else if(path.startsWith("/files/")){
+                String body = handleFileRequest(path);
+                out.write(body.getBytes());
             }
             else{
                 out.write(
@@ -150,4 +164,32 @@ public class HttpServer {
         return header;
     }
 
+
+    public String handleFileRequest(String path){
+        StringBuilder sb = new StringBuilder();
+        sb.append(directory).append(path.substring(7));
+        Path filePath = Paths.get(sb.toString());
+        boolean exists = Files.exists(filePath);
+        String result;
+        try{
+            if (exists){
+                result = handleFileRequestSuccess(filePath);
+            }
+            else{
+                result = "HTTP/1.1 404 Not Found\r\n\r\n";
+            }
+        } catch (IOException e){
+            result = "HTTP/1.1 404 Not Found\r\n\r\n";
+        }
+        return result;
+    }
+
+    public String handleFileRequestSuccess(Path filePath) throws  IOException{
+        StringBuilder sb = new StringBuilder();
+        String content = Files.readString(filePath);
+        sb.append("HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: ");
+        sb.append(content.length()).append("\r\n\r\n");
+        sb.append(content);
+        return sb.toString();
+    }
 }
