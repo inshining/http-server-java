@@ -98,7 +98,20 @@ public class HttpServer {
                 } else{
                     pathStr = headers.get("User-Agent");
                 }
-                responseBodyHandler(out, pathStr);
+                Map<String, String> responseHeader = getResponseHeader(pathStr, headers);
+//                responseBodyHandler(out, pathStr);
+
+                out.write( "HTTP/1.1 200 OK\r\n".getBytes());
+                for (String key : responseHeader.keySet()){
+                    StringBuilder sb = new StringBuilder();
+                    sb.append(key);
+                    sb.append(":");
+                    sb.append(responseHeader.get(key));
+                    sb.append("\r\n");
+                    out.write(sb.toString().getBytes());
+                }
+                out.write("\r\n".getBytes());
+                out.write(pathStr.getBytes());
 
             }
             else if(path.startsWith("/files/")){
@@ -171,6 +184,19 @@ public class HttpServer {
 
         // body
         out.write(pathStr.getBytes());
+    }
+
+
+    public static HashMap<String, String> getResponseHeader(String responseBody, Map<String, String> requestHeader){
+
+        HashMap<String, String> headers = new HashMap<>();
+        headers.put("Content-Length", String.valueOf(responseBody.length()));
+        headers.put("Content-Type", "text/plain");
+        String aeType = requestHeader.getOrDefault("Accept-Encoding", "");
+        if (aeType.equals("gzip")){
+            headers.put("Content-Encoding", aeType);
+        }
+        return headers;
     }
 
     public static Map<String, String> handlerHeaders(BufferedReader in) throws  IOException{
