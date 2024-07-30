@@ -7,6 +7,7 @@ import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -193,8 +194,9 @@ public class HttpServer {
         headers.put("Content-Length", String.valueOf(responseBody.length()));
         headers.put("Content-Type", "text/plain");
         String aeType = requestHeader.getOrDefault("Accept-Encoding", "");
-        if (aeType.equals("gzip")){
-            headers.put("Content-Encoding", aeType);
+        boolean isContainGzip = Arrays.stream(aeType.split(",")).map(t -> t.trim()).anyMatch(t -> t.equals("gzip"));
+        if (isContainGzip){
+            headers.put("Content-Encoding", "gzip");
         }
         return headers;
     }
